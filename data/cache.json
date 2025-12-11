@@ -1,0 +1,39 @@
+{
+  "agify:testuser1": {
+    "count": 0,
+    "name": "testuser1",
+    "age": null
+  },
+  "agify:testuser2": {
+    "count": 0,
+    "name": "testuser2",
+    "age": null
+  },
+  "agify:michael": {
+    "count": 298219,
+    "name": "michael",
+    "age": 64
+  },
+  "agify:mick": {
+    "count": 12775,
+    "name": "mick",
+    "age": 64
+  },
+  "agify:mickey": {
+    "count": 5552,
+    "name": "mickey",
+    "age": 68
+  },
+  "genderize:sophie": {
+    "count": 402200,
+    "name": "sophie",
+    "gender": "female",
+    "probability": 0.99
+  },
+  "genderize:david": {
+    "count": 3489607,
+    "name": "david",
+    "gender": "male",
+    "probability": 1
+  }
+}
