@@ -35,5 +35,10 @@
     "name": "david",
     "gender": "male",
     "probability": 1
+  },
+  "agify:signaturetest": {
+    "count": 0,
+    "name": "signaturetest",
+    "age": null
   }
 }

@@ -9,6 +9,16 @@ const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
 
+function sendResponse(res, data) {
+    // Inject signature
+    const responseData = {
+        ...data,
+        servi_par: "cache-misere",
+        realise_par: "David Fasani"
+    };
+    res.json(responseData);
+}
+
 app.get('/agify', async (req, res) => {
     try {
         const params = req.query;
@@ -22,7 +32,7 @@ app.get('/agify', async (req, res) => {
         const cachedData = await cacheManager.getCache(cacheKey);
         if (cachedData) {
             res.set('X-Proxy-Source', 'Cache');
-            return res.json(cachedData);
+            return sendResponse(res, cachedData);
         }
 
         // 2. Check Limits
@@ -36,7 +46,7 @@ app.get('/agify', async (req, res) => {
             console.log(`[LIMIT] Daily limit reached for ${agifyService.SERVICE_NAME}. Serving mock.`);
             const mockData = agifyService.getMockData(params);
             res.set('X-Proxy-Source', 'Mock');
-            return res.json(mockData);
+            return sendResponse(res, mockData);
         }
 
         // 3. Fetch Upstream
@@ -51,7 +61,7 @@ app.get('/agify', async (req, res) => {
         await cacheManager.incrementUsage(agifyService.SERVICE_NAME);
 
         res.set('X-Proxy-Source', 'Upstream');
-        res.json(data);
+        sendResponse(res, data);
 
     } catch (error) {
         console.error('Proxy error:', error.message);
@@ -61,7 +71,7 @@ app.get('/agify', async (req, res) => {
             console.log(`[UPSTREAM] Rate limited by upstream. Serving mock.`);
             const mockData = agifyService.getMockData(req.query);
             res.set('X-Proxy-Source', 'Mock-Fallback');
-            return res.json(mockData);
+            return sendResponse(res, mockData);
         }
 
         res.status(500).json({ error: 'Internal Server Error' });
@@ -81,7 +91,7 @@ app.get('/genderize', async (req, res) => {
         const cachedData = await cacheManager.getCache(cacheKey);
         if (cachedData) {
             res.set('X-Proxy-Source', 'Cache');
-            return res.json(cachedData);
+            return sendResponse(res, cachedData);
         }
 
         // 2. Check Limits
@@ -95,7 +105,7 @@ app.get('/genderize', async (req, res) => {
             console.log(`[LIMIT] Daily limit reached for ${genderizeService.SERVICE_NAME}. Serving mock.`);
             const mockData = genderizeService.getMockData(params);
             res.set('X-Proxy-Source', 'Mock');
-            return res.json(mockData);
+            return sendResponse(res, mockData);
         }
 
         // 3. Fetch Upstream
@@ -110,7 +120,7 @@ app.get('/genderize', async (req, res) => {
         await cacheManager.incrementUsage(genderizeService.SERVICE_NAME);
 
         res.set('X-Proxy-Source', 'Upstream');
-        res.json(data);
+        sendResponse(res, data);
 
     } catch (error) {
         console.error('Proxy error:', error.message);
@@ -118,7 +128,7 @@ app.get('/genderize', async (req, res) => {
             console.log(`[UPSTREAM] Rate limited by upstream. Serving mock.`);
             const mockData = genderizeService.getMockData(req.query);
             res.set('X-Proxy-Source', 'Mock-Fallback');
-            return res.json(mockData);
+            return sendResponse(res, mockData);
         }
         res.status(500).json({ error: 'Internal Server Error' });
     }
