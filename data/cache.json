@@ -40,5 +40,17 @@
     "count": 0,
     "name": "signaturetest",
     "age": null
+  },
+  "quotable:default": {
+    "_id": "8OBH14kq2G",
+    "content": "Neatness begets order; but from order to taste there is the same difference as from taste to genius, or from love to friendship.",
+    "author": "Johann Kaspar Lavater",
+    "tags": [
+      "Friendship"
+    ],
+    "authorSlug": "johann-kaspar-lavater",
+    "length": 128,
+    "dateAdded": "2019-02-17",
+    "dateModified": "2023-04-14"
   }
 }

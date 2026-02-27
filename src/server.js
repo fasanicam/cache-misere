@@ -4,6 +4,7 @@ const cacheManager = require('./cache-manager');
 const agifyService = require('./services/agify');
 const genderizeService = require('./services/genderize');
 const nationalizeService = require('./services/nationalize');
+const quotableService = require('./services/quotable');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -54,7 +55,8 @@ app.get('/agify', async (req, res) => {
         const url = agifyService.getUrl(params);
         console.log(`[UPSTREAM] Fetching ${url}`);
 
-        const response = await axios.get(url);
+        const axiosConfig = agifyService.getAxiosConfig ? agifyService.getAxiosConfig() : {};
+        const response = await axios.get(url, axiosConfig);
         const data = response.data;
 
         // 4. Save to Cache and Increment Usage
@@ -113,7 +115,8 @@ app.get('/genderize', async (req, res) => {
         const url = genderizeService.getUrl(params);
         console.log(`[UPSTREAM] Fetching ${url}`);
 
-        const response = await axios.get(url);
+        const axiosConfig = genderizeService.getAxiosConfig ? genderizeService.getAxiosConfig() : {};
+        const response = await axios.get(url, axiosConfig);
         const data = response.data;
 
         // 4. Save to Cache and Increment Usage
@@ -169,7 +172,8 @@ app.get('/nationalize', async (req, res) => {
         const url = nationalizeService.getUrl(params);
         console.log(`[UPSTREAM] Fetching ${url}`);
 
-        const response = await axios.get(url);
+        const axiosConfig = nationalizeService.getAxiosConfig ? nationalizeService.getAxiosConfig() : {};
+        const response = await axios.get(url, axiosConfig);
         const data = response.data;
 
         // 4. Save to Cache and Increment Usage
@@ -184,6 +188,60 @@ app.get('/nationalize', async (req, res) => {
         if (error.response && error.response.status === 429) {
             console.log(`[UPSTREAM] Rate limited by upstream. Serving mock.`);
             const mockData = nationalizeService.getMockData(req.query);
+            res.set('X-Proxy-Source', 'Mock-Fallback');
+            return sendResponse(res, mockData);
+        }
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+});
+
+app.get('/quotable/random', async (req, res) => {
+    try {
+        const params = req.query;
+
+        const cacheKey = quotableService.getCacheKey(params);
+
+        // 1. Check Cache
+        const cachedData = await cacheManager.getCache(cacheKey);
+        if (cachedData) {
+            res.set('X-Proxy-Source', 'Cache');
+            return sendResponse(res, cachedData);
+        }
+
+        // 2. Check Limits
+        const currentUsage = await cacheManager.getUsage(quotableService.SERVICE_NAME);
+        const limit = quotableService.DAILY_LIMIT;
+
+        res.set('X-Rate-Limit-Used', currentUsage);
+        res.set('X-Rate-Limit-Limit', limit);
+
+        if (currentUsage >= limit) {
+            console.log(`[LIMIT] Daily limit reached for ${quotableService.SERVICE_NAME}. Serving mock.`);
+            const mockData = quotableService.getMockData(params);
+            res.set('X-Proxy-Source', 'Mock');
+            return sendResponse(res, mockData);
+        }
+
+        // 3. Fetch Upstream
+        const url = quotableService.getUrl(params);
+        console.log(`[UPSTREAM] Fetching ${url}`);
+
+        const axiosConfig = quotableService.getAxiosConfig ? quotableService.getAxiosConfig() : {};
+        const response = await axios.get(url, axiosConfig);
+        const data = response.data;
+
+        // 4. Save to Cache and Increment Usage
+        await cacheManager.setCache(cacheKey, data);
+        await cacheManager.incrementUsage(quotableService.SERVICE_NAME);
+
+        res.set('X-Proxy-Source', 'Upstream');
+        sendResponse(res, data);
+
+    } catch (error) {
+        console.error('Proxy error:', error.message);
+        if (error.response && error.response.status === 429) {
+            console.log(`[UPSTREAM] Rate limited by upstream. Serving mock.`);
+            const mockData = quotableService.getMockData(req.query);
             res.set('X-Proxy-Source', 'Mock-Fallback');
             return sendResponse(res, mockData);
         }
