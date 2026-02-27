@@ -11,10 +11,25 @@ async function getCache(key) {
     try {
         if (await fs.pathExists(CACHE_FILE)) {
             const cache = await fs.readJson(CACHE_FILE);
-            // Check if key exists and isn't expired (optional, for now just permanent cache as requested)
+
             if (cache[key]) {
-                console.log(`[CACHE] Hit for ${key}`);
-                return cache[key];
+                const item = cache[key];
+
+                // Check if it's a new style cache item with expiration
+                if (item.expiresAt) {
+                    if (Date.now() > item.expiresAt) {
+                        console.log(`[CACHE] Expired for ${key}`);
+                        delete cache[key];
+                        await fs.writeJson(CACHE_FILE, cache, { spaces: 2 });
+                        return null;
+                    }
+                    console.log(`[CACHE] Hit for ${key} (expires in ${Math.round((item.expiresAt - Date.now()) / 1000)}s)`);
+                    return item.data;
+                }
+
+                // Old style cache item (permanent)
+                console.log(`[CACHE] Hit for ${key} (permanent)`);
+                return item;
             }
         }
     } catch (err) {
@@ -23,15 +38,24 @@ async function getCache(key) {
     return null;
 }
 
-async function setCache(key, data) {
+async function setCache(key, data, ttlMs = null) {
     try {
         let cache = {};
         if (await fs.pathExists(CACHE_FILE)) {
             cache = await fs.readJson(CACHE_FILE);
         }
-        cache[key] = data;
+
+        if (ttlMs) {
+            cache[key] = {
+                data: data,
+                expiresAt: Date.now() + ttlMs
+            };
+        } else {
+            cache[key] = data;
+        }
+
         await fs.writeJson(CACHE_FILE, cache, { spaces: 2 });
-        console.log(`[CACHE] Saved for ${key}`);
+        console.log(`[CACHE] Saved for ${key}${ttlMs ? ` (TTL: ${ttlMs}ms)` : ' (permanent)'}`);
     } catch (err) {
         console.error('Error writing cache:', err);
     }

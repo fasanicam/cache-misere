@@ -2,7 +2,7 @@ const axios = require('axios');
 const https = require('https');
 
 const SERVICE_NAME = 'quotable';
-const BASE_URL = 'https://api.quotable.io/random';
+const BASE_URL = 'https://dummyjson.com/quotes/random';
 const DAILY_LIMIT = 100;
 
 function getUrl(params) {
@@ -32,7 +32,32 @@ function getMockData(params) {
 
 function getAxiosConfig() {
     return {
-        httpsAgent: new https.Agent({ rejectUnauthorized: false })
+        httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+        transformResponse: [
+            function (data) {
+                let parsed;
+                try {
+                    parsed = JSON.parse(data);
+                } catch (e) {
+                    return data;
+                }
+
+                if (parsed && parsed.quote && parsed.author) {
+                    return {
+                        _id: String(parsed.id || Date.now()),
+                        content: parsed.quote,
+                        author: parsed.author,
+                        tags: ["a-fasani-json"],
+                        authorSlug: parsed.author.toLowerCase().replace(/\s+/g, '-'),
+                        length: parsed.quote.length,
+                        dateAdded: new Date().toISOString().split('T')[0],
+                        dateModified: new Date().toISOString().split('T')[0]
+                    };
+                }
+
+                return parsed;
+            }
+        ]
     };
 }
 
